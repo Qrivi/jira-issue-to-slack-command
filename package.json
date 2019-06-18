@@ -1,0 +1,41 @@
+{
+  "name": "jira-issue-to-slack-command",
+  "version": "1.0.0",
+  "description": "Fetches Jira issue details on command.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "lint": "standardx",
+    "lintfix": "standardx --fix",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Qrivi/jira-issue-to-slack-command.git"
+  },
+  "author": "Kristof Dewilde <kristof.dewilde@designisdead.com>",
+  "license": "MIT",
+  "dependencies": {
+    "base-64": "^0.1.0",
+    "express": "^4.17.1",
+    "sync-request": "^6.1.0",
+    "then-request": "^6.0.2"
+  },
+  "devDependencies": {
+    "standardx": "^3.0.1"
+  },
+  "eslintConfig": {
+    "parserOptions": {
+      "ecmaVersion": 2017
+    },
+    "env": {
+      "es6": true
+    },
+    "rules": {
+      "brace-style": [
+        "error",
+        "1tbs"
+      ]
+    }
+  }
+}
