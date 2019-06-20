@@ -86,7 +86,7 @@ function fetch (key) {
   const res = request('GET', url, headers)
 
   if (res.statusCode !== 200) {
-    return { statusCode: res.statusCode }
+    return { statusCode: res.statusCode, key: key.toUpperCase() }
   }
 
   return {
