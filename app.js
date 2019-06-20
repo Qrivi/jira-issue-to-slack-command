@@ -24,12 +24,12 @@ function format (issue, ephemeral) {
     case 200:
       return {
         response_type: ephemeral ? 'ephemeral' : 'in_channel',
-        username: issue.key,
         attachments: [
           {
-            mrkdwn_in: ['text'],
+            mrkdwn_in: ['text', 'pretext'],
             fallback: `${issue.key}: ${issue.summary} (${issue.status.name})`,
             color: '#1E46A0',
+            pretext: `*${issue.key}*:`,
             title: issue.summary,
             title_link: `${trim(jira)}/browse/${issue.key}`,
             text: `\`${issue.status.name}\` ${issue.status.description}`,
@@ -40,11 +40,12 @@ function format (issue, ephemeral) {
     case 404:
       return {
         response_type: 'ephemeral',
-        username: issue.key,
         attachments: [
           {
+            mrkdwn_in: ['pretext'],
             fallback: `${issue.key}: Issue does not exist or I don't have permission to see it`,
             color: '#ff0000',
+            pretext: `*${issue.key}*:`,
             title: `Issue does not exist or I don't have permission to see it`,
             title_link: `${trim(jira)}/browse/${issue.key}`
           }
@@ -53,11 +54,12 @@ function format (issue, ephemeral) {
     default:
       return {
         response_type: 'ephemeral',
-        username: issue.key,
         attachments: [
           {
+            mrkdwn_in: ['pretext'],
             fallback: `${issue.key}: Something went wrong internally when I tried to process your request`,
             color: '#ff0000',
+            pretext: `*${issue.key}*:`,
             title: 'Something went wrong internally when I tried to process your request',
             title_link: `${trim(jira)}/browse/${issue.key}`
           }
@@ -117,9 +119,7 @@ app.post('/issue', function (req, res) {
     request('POST', callback, { json: format(issue, ephemeral) })
   })
 
-  res.set('Content-Type', 'application/json')
-    .status(200)
-    .send({ text: `Let's get this bread.` })
+  res.status(200).end()
 })
 
 app.listen(port, function () {
