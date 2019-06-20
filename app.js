@@ -19,10 +19,12 @@ const headers = { headers: {
   'Accept': 'application/json'
 } }
 
+// Removes leading and trailing slashes and spaces from `string`.
 function trim (string) {
   return string ? string.replace(/(^[ /])|([ /]$)/g, '') : false
 }
 
+// Formats `issue` so Slack can understand it.
 function format (issue, ephemeral) {
   switch (issue.statusCode) {
     case 200:
@@ -78,6 +80,7 @@ function format (issue, ephemeral) {
   }
 }
 
+// Fetches issue `key` from Jira.
 function fetch (key) {
   const url = `${trim(jira)}/rest/api/latest/issue/${trim(key)}?fields=summary,status,assignee,priority,issuetype,subtasks,${flagField}`
   const res = request('GET', url, headers)
@@ -93,10 +96,12 @@ function fetch (key) {
   }
 }
 
+// Checks if `issue` is flagged.
 function flag (issue) {
   return issue[flagField] && issue[flagField][0].value === 'Impediment' ? '🚩' : ''
 }
 
+// Returns percentage of completion of the `subtasks`.
 function progress (subtasks) {
   if (!subtasks || !subtasks.length) {
     return false
@@ -106,8 +111,10 @@ function progress (subtasks) {
   return `${Math.floor((donetasks.length / subtasks.length) * 100)}% done`
 }
 
+// Set up Express.
 app.use(express.urlencoded({ extended: true }))
 
+// Endpoint to verify that authentication with Jira was successful.
 app.get('/me', function (req, res) {
   try {
     const data = request('GET', `${jira}/rest/api/latest/myself`, headers)
@@ -121,6 +128,7 @@ app.get('/me', function (req, res) {
   }
 })
 
+// GET endpoint, so the output can easily be checked in the browser, just in case.
 app.get('/issue/:key', function (req, res) {
   const issue = fetch(req.params.key)
   res.set('Content-Type', 'application/json')
@@ -128,6 +136,7 @@ app.get('/issue/:key', function (req, res) {
     .send({ ...issue, message: format(issue) })
 })
 
+// POST endpoint, an entrypoint for Slack.
 app.post('/issue', function (req, res) {
   const params = decodeURI(req.body.text).replace(/  +/g, ' ').split(' ')
   const key = `${trim(req.body.command)}-${params[0]}`
@@ -144,6 +153,7 @@ app.post('/issue', function (req, res) {
   res.status(200).end()
 })
 
+// If speaking is silver, then listening is gold.
 app.listen(port, function () {
   console.log(`Started on port ${port}, fetching from ${jira} as ${username}`)
 })
