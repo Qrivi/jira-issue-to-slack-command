@@ -19,39 +19,70 @@ function trim (string) {
   return string ? string.replace(/(^[ /])|([ /]$)/g, '') : false
 }
 
-function getIssue (key) {
+function format (issue, ephemeral) {
+  switch (issue.statusCode) {
+    case 200:
+      return {
+        response_type: ephemeral ? 'ephemeral' : 'in_channel',
+        username: issue.key,
+        attachments: [
+          {
+            mrkdwn_in: ['text'],
+            fallback: `${issue.key}: ${issue.summary} (${issue.status.name})`,
+            color: '#1E46A0',
+            title: issue.summary,
+            title_link: `${trim(jira)}/browse/${issue.key}`,
+            text: `\`${issue.status.name}\` ${issue.status.description}`,
+            footer: `${issue.priority.name} priority ${issue.issuetype.name.toLowerCase()} assigned to ${issue.assignee.displayName}`
+          }
+        ]
+      }
+    case 404:
+      return {
+        response_type: 'ephemeral',
+        username: issue.key,
+        attachments: [
+          {
+            fallback: `${issue.key}: Issue does not exist or I don't have permission to see it`,
+            color: '#ff0000',
+            title: `Issue does not exist or I don't have permission to see it`,
+            title_link: `${trim(jira)}/browse/${issue.key}`
+          }
+        ]
+      }
+    default:
+      return {
+        response_type: 'ephemeral',
+        username: issue.key,
+        attachments: [
+          {
+            fallback: `${issue.key}: Something went wrong internally when I tried to process your request`,
+            color: '#ff0000',
+            title: 'Something went wrong internally when I tried to process your request',
+            title_link: `${trim(jira)}/browse/${issue.key}`
+          }
+        ]
+      }
+  }
+}
+
+function fetch (key) {
   console.log(`Fetching Jira details for ${key}`)
   const url = `${trim(jira)}/rest/api/latest/issue/${trim(key)}?fields=summary,status,assignee,priority,issuetype`
   const res = request('GET', url, headers)
 
-  switch (res.statusCode) {
-    case 200:
-      const issue = JSON.parse(res.body.toString())
-      return {
-        key: issue.key,
-        status: 200,
-        content: {
-          username: issue.key,
-          attachments: [
-            {
-              mrkdwn_in: ['text'],
-              fallback: `${issue.key}: ${issue.fields.summary} (${issue.fields.status.name})`,
-              color: '#1E46A0',
-              title: issue.fields.summary,
-              title_link: `${trim(jira)}/browse/${issue.key}`,
-              text: `\`${issue.fields.status.name}\` ${issue.fields.status.description}`,
-              footer: `${issue.fields.priority.name} priority ${issue.fields.issuetype.name.toLowerCase()} assigned to ${issue.fields.assignee.displayName}`
-            }
-          ]
-        }
-      }
-    default:
-      console.log('no es bueno')
-      console.log(res.body.toString())
+  if (res.statusCode !== 200) {
+    return { statusCode: res.statusCode }
+  }
+
+  return {
+    statusCode: 200,
+    key: key.toUpperCase(),
+    ...JSON.parse(res.body.toString()).fields
   }
 }
 
-app.use(express.urlencoded())
+app.use(express.urlencoded({ extended: true }))
 
 app.get('/me', function (req, res) {
   try {
@@ -67,26 +98,28 @@ app.get('/me', function (req, res) {
 })
 
 app.get('/issue/:key', function (req, res) {
-  const issue = getIssue(req.params.key)
+  const issue = fetch(req.params.key)
   res.set('Content-Type', 'application/json')
-    .status(issue.status)
-    .send(issue)
+    .status(issue.statusCode)
+    .send({ ...issue, message: format(issue) })
 })
 
 app.post('/issue', function (req, res) {
   const params = decodeURI(req.body.text).replace(/  +/g, ' ').split(' ')
   const key = `${trim(req.body.command)}-${params[0]}`
 
-  new Promise(function (resolve) {
-    resolve(getIssue(key))
-  }).then(function (issue) {
-    console.log('We now have the issue', issue.key)
-  })
-  console.log('async checking the key, getting the issue')
+  const callback = req.body.response_url
+  const ephemeral = params[1] === 'me'
 
-  res.set('Content-Type', 'plain/text')
+  new Promise(function (resolve) {
+    resolve(fetch(key))
+  }).then(function (issue) {
+    request('POST', callback, { json: format(issue, ephemeral) })
+  })
+
+  res.set('Content-Type', 'application/json')
     .status(200)
-    .send('OK')
+    .send({ text: `Let's get this bread.` })
 })
 
 app.listen(port, function () {
