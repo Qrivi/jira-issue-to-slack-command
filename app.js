@@ -9,6 +9,7 @@ const jira = process.env.JIRA_URL || 'https://basecompany.atlassian.net'
 const username = process.env.JIRA_USER || 'admin'
 const password = process.env.JIRA_PASS || 'admin'
 const credentials = base64.encode(`${username}:${password}`)
+const flag = process.env.JIRA_FLAG || 'customfield_10002'
 
 const headers = { headers: {
   'Authorization': `Basic ${credentials}`,
@@ -32,7 +33,7 @@ function format (issue, ephemeral) {
             pretext: `*${issue.key}*:`,
             title: issue.summary,
             title_link: `${trim(jira)}/browse/${issue.key}`,
-            text: `\`${issue.status.name}\` ${issue.status.description}`,
+            text: `\`${issue.status.name}\` ${issue.status.description} ${issue[flag] && issue[flag][0].value === 'Impediment' ? '🚩' : ''}`,
             footer: `${issue.priority.name} priority ${issue.issuetype.name.toLowerCase()} assigned to ${issue.assignee.displayName}`
           }
         ]
@@ -70,7 +71,7 @@ function format (issue, ephemeral) {
 
 function fetch (key) {
   console.log(`Fetching Jira details for ${key}`)
-  const url = `${trim(jira)}/rest/api/latest/issue/${trim(key)}?fields=summary,status,assignee,priority,issuetype`
+  const url = `${trim(jira)}/rest/api/latest/issue/${trim(key)}?fields=summary,status,assignee,priority,issuetype,${flag}`
   const res = request('GET', url, headers)
 
   if (res.statusCode !== 200) {
