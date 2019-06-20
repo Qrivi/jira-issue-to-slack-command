@@ -9,7 +9,7 @@ const jira = process.env.JIRA_URL || 'https://basecompany.atlassian.net'
 const username = process.env.JIRA_USER || 'admin'
 const password = process.env.JIRA_PASS || 'admin'
 const credentials = base64.encode(`${username}:${password}`)
-const flag = process.env.JIRA_FLAG || 'customfield_10002'
+const flagField = process.env.JIRA_FLAG || 'customfield_10002'
 
 const headers = { headers: {
   'Authorization': `Basic ${credentials}`,
@@ -23,6 +23,12 @@ function trim (string) {
 function format (issue, ephemeral) {
   switch (issue.statusCode) {
     case 200:
+      const calculatedProgress = progress(issue.subtasks)
+      if (calculatedProgress) {
+        issue.progress = `, ${calculatedProgress}`
+      } else {
+        issue.progress = ''
+      }
       return {
         response_type: ephemeral ? 'ephemeral' : 'in_channel',
         attachments: [
@@ -33,8 +39,8 @@ function format (issue, ephemeral) {
             pretext: `*${issue.key}*:`,
             title: issue.summary,
             title_link: `${trim(jira)}/browse/${issue.key}`,
-            text: `\`${issue.status.name}\` ${issue.status.description} ${issue[flag] && issue[flag][0].value === 'Impediment' ? '🚩' : ''}`,
-            footer: `${issue.priority.name} priority ${issue.issuetype.name.toLowerCase()} assigned to ${issue.assignee.displayName}`
+            text: `\`${issue.status.name}\` ${issue.status.description} ${flag(issue)}`,
+            footer: `${issue.priority.name} priority ${issue.issuetype.name.toLowerCase()} assigned to ${issue.assignee.displayName}${issue.progress}`
           }
         ]
       }
@@ -71,7 +77,7 @@ function format (issue, ephemeral) {
 
 function fetch (key) {
   console.log(`Fetching Jira details for ${key}`)
-  const url = `${trim(jira)}/rest/api/latest/issue/${trim(key)}?fields=summary,status,assignee,priority,issuetype,${flag}`
+  const url = `${trim(jira)}/rest/api/latest/issue/${trim(key)}?fields=summary,status,assignee,priority,issuetype,subtasks,${flagField}`
   const res = request('GET', url, headers)
 
   if (res.statusCode !== 200) {
@@ -83,6 +89,19 @@ function fetch (key) {
     key: key.toUpperCase(),
     ...JSON.parse(res.body.toString()).fields
   }
+}
+
+function flag (issue) {
+  return issue[flagField] && issue[flagField][0].value === 'Impediment' ? '🚩' : ''
+}
+
+function progress (subtasks) {
+  if (!subtasks || !subtasks.length) {
+    return false
+  }
+
+  const donetasks = subtasks.map(task => task.fields.status.statusCategory).filter(status => status.key === 'done')
+  return `${Math.floor((donetasks.length / subtasks.length) * 100)}% done`
 }
 
 app.use(express.urlencoded({ extended: true }))
