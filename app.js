@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+require('dotenv').config()
+
 const express = require('express')
 const base64 = require('base-64')
 const request = require('sync-request')
@@ -5,11 +8,11 @@ const request = require('sync-request')
 const app = express()
 const port = process.env.PORT || 3000
 
-const jira = process.env.JIRA_URL || 'https://basecompany.atlassian.net'
+const jira = process.env.JIRA_URL || 'https://jira.atlassian.net'
 const username = process.env.JIRA_USER || 'admin'
 const password = process.env.JIRA_PASS || 'admin'
 const credentials = base64.encode(`${username}:${password}`)
-const flagField = process.env.JIRA_FLAG || 'customfield_10002'
+const flagField = process.env.JIRA_FLAG || 'customfield_10000'
 
 const headers = { headers: {
   'Authorization': `Basic ${credentials}`,
@@ -76,7 +79,6 @@ function format (issue, ephemeral) {
 }
 
 function fetch (key) {
-  console.log(`Fetching Jira details for ${key}`)
   const url = `${trim(jira)}/rest/api/latest/issue/${trim(key)}?fields=summary,status,assignee,priority,issuetype,subtasks,${flagField}`
   const res = request('GET', url, headers)
 
@@ -143,6 +145,5 @@ app.post('/issue', function (req, res) {
 })
 
 app.listen(port, function () {
-  console.log(`Started on port ${port}`)
-  console.log(`Will fetch from ${jira} as ${username}`)
+  console.log(`Started on port ${port}, fetching from ${jira} as ${username}`)
 })
