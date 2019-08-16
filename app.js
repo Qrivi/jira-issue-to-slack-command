@@ -29,10 +29,9 @@ function format (issue, ephemeral) {
   switch (issue.statusCode) {
     case 200:
       const calculatedProgress = progress(issue.subtasks)
-      if (calculatedProgress) {
-        issue.progress = `, ${calculatedProgress}`
-      } else {
-        issue.progress = ''
+      const text = {
+        progress: calculatedProgress ? `, ${calculatedProgress}` : '',
+        assignee: issue.assignee ? ` assigned to ${issue.assignee.displayName}` : ''
       }
       return {
         response_type: ephemeral ? 'ephemeral' : 'in_channel',
@@ -45,7 +44,7 @@ function format (issue, ephemeral) {
             title: issue.summary,
             title_link: `${trim(jira)}/browse/${issue.key}`,
             text: `\`${issue.status.name}\` ${issue.status.description} ${flag(issue)}`,
-            footer: `${issue.priority.name} priority ${issue.issuetype.name.toLowerCase()} assigned to ${issue.assignee.displayName}${issue.progress}`
+            footer: `${issue.priority.name} priority ${issue.issuetype.name.toLowerCase()}${text.assignee}${text.progress}`
           }
         ]
       }
