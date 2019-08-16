@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "nodemon": "^1.19.1",
-    "standardx": "^3.0.1"
+    "standardx": "^4.0.0"
   },
   "eslintConfig": {
     "parserOptions": {
